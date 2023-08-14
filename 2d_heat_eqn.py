@@ -14,7 +14,7 @@ delta_y = 1
 delta_t = (delta_x ** 2) / (4 * alpha)
 gamma = (alpha * delta_t) / (delta_x ** 2)
 
-u = np.empty( (max_iter_time, plate_length, plate_length) )
+u = np.empty( (max_iter_time, plate_length, plate_width) )
 
 u_initial = 0.0
 
