@@ -34,7 +34,7 @@ int main()
 
 	// Heat flux boundary condition
 	strcpy(Mesh[0].bc, "HeatFlux");
-	double phi_bound = 10000; // Watts / Square Meter
+	double phi_bound = 100; // Watts / Square Meter
 	// Convection boundary condition
 	strcpy(Mesh[N - 1].bc, "Convection");
 	double T_amb = 22;
