@@ -47,5 +47,8 @@ int main()
     }
     printf("\n");
 
+    // so the loop heirarchy here will be:
+    // timestep -> iteration -> point-by-point
+
     return 0;
 }

@@ -11,8 +11,8 @@
 int main()
 {
 	int N = 9;
-	struct MegaNode *Mesh;
-	Mesh = (struct MegaNode *)calloc(N, sizeof(struct MegaNode));
+	struct Node *Mesh;
+	Mesh = (struct Node *)calloc(N, sizeof(struct Node));
 	// BC_Mesh
 	if (Mesh == NULL)
 	{
@@ -29,14 +29,14 @@ int main()
 		Mesh[i].T = 20;
 		Mesh[i].k = 45.0;
 		Mesh[i].dx = 0.1;
-		strcpy(Mesh[i].bc, "None");
+		//strcpy(Mesh[i].bc, "None");
 	}
 
 	// Heat flux boundary condition
-	strcpy(Mesh[0].bc, "HeatFlux");
+	//strcpy(Mesh[0].bc, "HeatFlux");
 	double phi_bound = 100; // Watts / Square Meter
 	// Convection boundary condition
-	strcpy(Mesh[N - 1].bc, "Convection");
+	//strcpy(Mesh[N - 1].bc, "Convection");
 	double T_amb = 22;
 	double h_amb = 25.32; // convection, steel-to-air, W / (m^2 K)
 
@@ -94,6 +94,7 @@ int main()
 		// print temps after point-by-point, every tenth iteration OR when converged
 		if (iter % 10 == 0 || !ITERATE)
 		{
+			if (!ITERATE) printf("CONVERGED - SOLUTION BELOW:\n");
 			printf("ITR %d: ", iter);
 			for (int i = 0; i < N; i++)
 			{
