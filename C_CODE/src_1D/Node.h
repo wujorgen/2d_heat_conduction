@@ -17,7 +17,6 @@ struct Node
 {
     double T;
     double k;
-    double a;
     double dx;
 };
 

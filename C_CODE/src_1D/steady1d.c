@@ -10,7 +10,7 @@
 
 int main()
 {
-	int N = 9;
+	int N = 11;
 	struct Node *Mesh;
 	Mesh = (struct Node *)calloc(N, sizeof(struct Node));
 	// BC_Mesh
@@ -29,13 +29,13 @@ int main()
 	{
 		Mesh[i].T = 20;
 		Mesh[i].k = 45.0;
-		Mesh[i].dx = 0.1;
+		Mesh[i].dx = 0.05;
 		// strcpy(Mesh[i].bc, "None");
 	}
 
 	// Heat flux boundary condition
 	// strcpy(Mesh[0].bc, "HeatFlux");
-	double phi_bound = 100; // Watts / Square Meter
+	double phi_bound = 1000; // Watts / Square Meter
 	// Convection boundary condition
 	// strcpy(Mesh[N - 1].bc, "Convection");
 	double T_amb = 22;
