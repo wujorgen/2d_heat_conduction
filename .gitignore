@@ -1,3 +1,4 @@
 .vscode/
 secret/
 a.out
+venv/
