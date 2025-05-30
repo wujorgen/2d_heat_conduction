@@ -9,6 +9,8 @@ add_executable(ChorinProjectionCavity main.cpp)
 # target_include_directories(ChorinProjectionCavity PRIVATE /home/wujorgen/eigen-3.4.0)
 if (APPLE)
 	include_directories(/opt/homebrew/Cellar/eigen/3.4.0_1/include/eigen3/)
+elseif(UNIX)
+	include_directories(/usr/local/include/eigen-3.4.0)
 endif()
 
 target_compile_options(ChorinProjectionCavity PRIVATE -march=native)
