@@ -1,9 +1,8 @@
 #include <math.h>
 #include <Eigen/Dense>
 #include <iostream>
-#include "momentum_eqn.hpp"
-#include "corrections.hpp"
-#include "boundary.hpp"
+#include "Boundary.hpp"
+#include "SIMPLE.hpp"
 
 using Eigen::ArrayXXd;
 using Eigen::VectorXd;
@@ -41,32 +40,8 @@ int main()
 
     // The grid defines vertices.
 
-    // PRESSURE ghost grids: (NY + 1, NX + 1)
-    // The pressure ghost grid is fully staggered from the vertices.
-    ArrayXXd p = ArrayXXd::Ones(NY + 1, NX + 1);
-    ArrayXXd p_star = ArrayXXd::Ones(NY + 1, NX + 1);
-    ArrayXXd p_corr = ArrayXXd::Ones(NY + 1, NX + 1);
-    ArrayXXd p_b = ArrayXXd::Ones(NY + 1, NX + 1);
-
-    // u grid: (NY + 1, NX)
-    // staggered only in y-direction
-    // note that row 0 (top) and row NY + 1 (bottom) must be zero, as those are ghost velocities.
-    ArrayXXd u = ArrayXXd::Zero(NY + 1, NX);
-    ArrayXXd u_star = ArrayXXd::Zero(NY + 1, NX);
-    ArrayXXd u_corr = ArrayXXd::Zero(NY + 1, NX);
-    ArrayXXd d_e = ArrayXXd::Zero(NY + 1, NX);
-
-    // v grid: (NY, NX + 1)
-    // staggered only in x-direction
-    // note that col 0 (left) and col NX + 1 (right) must be zero, as those are ghost velocities.
-    ArrayXXd v = ArrayXXd::Zero(NY, NX + 1);
-    ArrayXXd v_star = ArrayXXd::Zero(NY, NX + 1);
-    ArrayXXd v_corr = ArrayXXd::Zero(NY, NX + 1);
-    ArrayXXd d_n = ArrayXXd::Zero(NY, NX + 1);
-
     // Boundary Conditions
     double U_LID = 1;
-    u(0, all) = U_LID;
 
     // Fluid Properties
     double mu = 1;  // 0.0010518  # dynamic viscosity, Pa*s
@@ -76,12 +51,26 @@ int main()
     double alpha = 0.8;
     double alpha_p = 0.5;
 
-    cout << p << endl;
+    ProblemInfo Problem;
+    Problem.mu = mu;
+    Problem.rho = rho;
+    Problem.relax = alpha;
+    Problem.relaxp = alpha_p;
 
-    EigenPtr(&p);
+    GridInfo Mesh;
+    Mesh.NX = NX;
+    Mesh.NY = NY;
+    Mesh.LX = LX;
+    Mesh.LY = LY;
+    Mesh.dx = dx;
+    Mesh.dy = dy;
+    Mesh.x = x;
+    Mesh.y = y;
 
-    cout << "asdfasdfasdf" << endl;
-    cout << p << endl;
+    BoundaryConditions BC;
+    BC.U_T = U_LID;
+
+    SIMPLE(BC, Mesh);
 
     return 0;
 }

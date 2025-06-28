@@ -7,11 +7,3 @@ using Eigen::all;
 using Eigen::last;
 using namespace std;
 
-#ifndef BOUNDARY
-#define BOUNDARY
-
-void EigenPtr(ArrayXXd* testarr);
-
-
-
-#endif

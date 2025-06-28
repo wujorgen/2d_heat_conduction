@@ -9,12 +9,12 @@ using Eigen::all;
 using Eigen::last;
 using namespace std;
 
-void CalcUStar()
+void CalcUStar(ArrayXXd& u, ArrayXXd& u_star, ArrayXXd& d_e)
 {
 
 }
 
-void CalcVStar()
+void CalcVStar(ArrayXXd& v, ArrayXXd& v_star, ArrayXXd& v_n)
 {
     
 }
