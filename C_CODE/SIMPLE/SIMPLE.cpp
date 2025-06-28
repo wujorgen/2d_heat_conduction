@@ -6,6 +6,7 @@
 #include "MomentumEquations.hpp"
 #include "Boundary.hpp"
 #include "Corrections.hpp"
+#include "Utilities.hpp"
 
 using Eigen::ArrayXXd;
 using Eigen::VectorXd;
@@ -21,14 +22,32 @@ void EigenRef(ArrayXXd& testarr)
     testarr(0, all) = 1234;
 }
 
+void FinalUVPFields(ArrayXXd& u_final, ArrayXXd& v_final, ArrayXXd& p_final,
+    const ArrayXXd& u, const ArrayXXd& v, const ArrayXXd& p)
+{
+    for (int i = 0; i < p.rows()-1; i++)
+    {
+        for (int j = 0; j < p.cols()-1; j++)
+        {
+            // p grid is offset in both directions
+            p_final(i,j) = (p(i,j) + p(i+1,j) + p(i,j+1) + p(i+1,j+1)) / 4;
+            // u grid is offset in y direction / along i index
+            u_final(i, j) = (u(i,j) + u(i+1,j)) / 2;
+            // v grid is offsetin x direction / along j index
+            v_final(i, j) = (v(i,j) + v(i,j+1)) / 2;
+        }
+    }
+
+}
+
 void SIMPLE(const BoundaryConditions& BC, const GridInfo& Mesh, const ProblemInfo& Problem)
 {
     // PRESSURE ghost grids: (NY + 1, NX + 1)
     // The pressure ghost grid is fully staggered from the vertices.
-    ArrayXXd p = ArrayXXd::Ones(Mesh.NY + 1, Mesh.NX + 1);
-    ArrayXXd p_star = ArrayXXd::Ones(Mesh.NY + 1, Mesh.NX + 1);
-    ArrayXXd p_corr = ArrayXXd::Ones(Mesh.NY + 1, Mesh.NX + 1);
-    ArrayXXd p_b = ArrayXXd::Ones(Mesh.NY + 1, Mesh.NX + 1);
+    ArrayXXd p = ArrayXXd::Zero(Mesh.NY + 1, Mesh.NX + 1);
+    ArrayXXd p_star = ArrayXXd::Zero(Mesh.NY + 1, Mesh.NX + 1);
+    ArrayXXd p_corr = ArrayXXd::Zero(Mesh.NY + 1, Mesh.NX + 1);
+    ArrayXXd p_b = ArrayXXd::Zero(Mesh.NY + 1, Mesh.NX + 1);
 
     // u grid: (NY + 1, NX)
     // staggered only in y-direction
@@ -37,6 +56,7 @@ void SIMPLE(const BoundaryConditions& BC, const GridInfo& Mesh, const ProblemInf
     ArrayXXd u_star = ArrayXXd::Zero(Mesh.NY + 1, Mesh.NX);
     ArrayXXd u_corr = ArrayXXd::Zero(Mesh.NY + 1, Mesh.NX);
     ArrayXXd d_e = ArrayXXd::Zero(Mesh.NY + 1, Mesh.NX);
+    ApplyUBoundary(u, BC);
 
     // v grid: (NY, NX + 1)
     // staggered only in x-direction
@@ -45,19 +65,22 @@ void SIMPLE(const BoundaryConditions& BC, const GridInfo& Mesh, const ProblemInf
     ArrayXXd v_star = ArrayXXd::Zero(Mesh.NY, Mesh.NX + 1);
     ArrayXXd v_corr = ArrayXXd::Zero(Mesh.NY, Mesh.NX + 1);
     ArrayXXd d_n = ArrayXXd::Zero(Mesh.NY, Mesh.NX + 1);
+    ApplyVBoundary(v, BC);
 
     int itr = 0;
-    int maxitr = 3;
+    int maxitr = 100;
     double error = 1;
-    double ethresh = 1e-4;
+    double ethresh = 1e-5;
+    bool DIVERGED = false;
+    bool CONVERGED = false;
 
     vector<double> errors;
 
     // TODO: timestep loop around this, with conditional to disable transient term
-    while (error > ethresh && itr < maxitr)
+    while (!DIVERGED && error > ethresh && itr < maxitr)
     {
         // calc u-momentum
-        CalcUStar(u_star, u, v, p, d_e, Mesh, Problem); cout << u_star << endl;
+        CalcUStar(u_star, u, v, p, d_e, Mesh, Problem);
 
         // apply u-momentum boundary conditions
         ApplyUBoundary(u_star, BC);
@@ -73,7 +96,7 @@ void SIMPLE(const BoundaryConditions& BC, const GridInfo& Mesh, const ProblemInf
         p_b.setZero();
 
         // calculate pressure corrections
-        CalcPressureCorrection(p_corr, p_b, u_star, v_star, d_e, d_n, Mesh);
+        CalcPressureCorrection(p_corr, p_b, u_star, v_star, d_e, d_n, Mesh); //cout << p_b << endl;
 
         // apply pressure corrections to pressure field
         ApplyPressureCorrection(p, p_corr, Problem);
@@ -94,10 +117,38 @@ void SIMPLE(const BoundaryConditions& BC, const GridInfo& Mesh, const ProblemInf
         ApplyVBoundary(v, BC);
 
         // check for convergence
-        cout << p_b.matrix().norm() << endl;
+        error = p_b.matrix().norm();
+        errors.push_back(error);
+        if (error > 1)
+        {
+            cout << (error > 1) << endl;
+            cout << "SOLUTION DIVERGED" << endl;
+            DIVERGED = true;
+        }
+        cout << "ITR: " << itr << ", ERROR: " << error << endl;
         itr++;
     }
-    
+
+
+    ArrayXXd u_final = ArrayXXd::Zero(Mesh.NY, Mesh.NX);
+    ArrayXXd v_final = ArrayXXd::Zero(Mesh.NY, Mesh.NX);
+    ArrayXXd p_final = ArrayXXd::Zero(Mesh.NY, Mesh.NX);
+
+    FinalUVPFields(u_final, v_final, p_final, u, v, p);
+
+    WriteVectorToCSV(errors, string("convergencehistory.txt"));
+
+    WriteArrayXXdToCSV(p_final, string("p.txt"));
+    WriteArrayXXdToCSV(u_final, string("u.txt"));
+    WriteArrayXXdToCSV(v_final, string("v.txt"));
+
+    std::vector<double> x_vec(Mesh.x.data(), Mesh.x.data() + Mesh.x.size());
+    std::vector<double> y_vec(Mesh.y.data(), Mesh.y.data() + Mesh.y.size());
+
+    WriteVectorToCSV(x_vec, string("x_domain.txt"));
+    WriteVectorToCSV(y_vec, string("y_domain.txt"));
+
+
     //cout << p << endl;
     //EigenRef(p);
     //cout << p << endl;

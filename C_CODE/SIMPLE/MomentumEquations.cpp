@@ -26,9 +26,9 @@ void CalcUStar(ArrayXXd& u_star, ArrayXXd& u, ArrayXXd& v, ArrayXXd& p, ArrayXXd
     double a_e;
     double A_e;
 
-    for (int i = 1; i < u_star.cols()-1; i++)
+    for (int i = 1; i < u_star.rows()-1; i++)
     {
-        for (int j = 1; j < u_star.rows()-1; j++)
+        for (int j = 1; j < u_star.cols()-1; j++)
         {
             // interp @ faces of u-velocity control volume 
             u_E = (u(i,j) + u(i,j+1)) / 2;
@@ -72,9 +72,9 @@ void CalcVStar(ArrayXXd& v_star, ArrayXXd& u, ArrayXXd& v, ArrayXXd& p, ArrayXXd
     double a_n;
     double A_n;
 
-    for (int i = 1; i < v_star.cols()-1; i++)
+    for (int i = 1; i < v_star.rows()-1; i++)
     {
-        for (int j = 1; j < v_star.rows()-1; j++)
+        for (int j = 1; j < v_star.cols()-1; j++)
         {
             // interp @ faces of v-velocity control volume 
             u_E = (u(i,j) + u(i+1,j)) / 2;

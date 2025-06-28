@@ -5,11 +5,17 @@
 #include "ProblemInfo.hpp"
 #endif
 
-using Eigen::ArrayXXd;
-using Eigen::VectorXd;
-
 void SIMPLE(const BoundaryConditions&, const GridInfo&, const ProblemInfo&);
 
-void EigenRef(ArrayXXd&);
+void FinalUVPFields(
+    Eigen::ArrayXXd&,
+    Eigen::ArrayXXd&,
+    Eigen::ArrayXXd&,
+    const Eigen::ArrayXXd&,
+    const Eigen::ArrayXXd&,
+    const Eigen::ArrayXXd&
+);
+
+void EigenRef(Eigen::ArrayXXd&);
 
 #endif

@@ -15,18 +15,26 @@ void CalcPressureCorrection(ArrayXXd& p_corr, ArrayXXd& p_b, const ArrayXXd& u_s
     {
         for (int j = 1; j < p_corr.cols()-1; j++)
         {
-            a_E = -d_e(i,j) * Mesh.dy;
-            a_W = -d_e(i,j-1) * Mesh.dy;
-            a_N = -d_n(i-1,j) * Mesh.dx;
-            a_S = -d_n(i,j) * Mesh.dx;
+            p_b(i,j) = -(u_star(i,j) - u_star(i,j-1)) * Mesh.dy - (v_star(i-1,j) - v_star(i,j)) * Mesh.dx;
+        }
+    }
+    for (int g = 0; g < 20; g++)
+    {
+        for (int i = 1; i < p_corr.rows()-1; i++)
+        {
+            for (int j = 1; j < p_corr.cols()-1; j++)
+            {
+                a_E = -d_e(i,j) * Mesh.dy;
+                a_W = -d_e(i,j-1) * Mesh.dy;
+                a_N = -d_n(i-1,j) * Mesh.dx;
+                a_S = -d_n(i,j) * Mesh.dx;
 
-            a_P = a_E + a_W + a_N + a_S;
+                a_P = a_E + a_W + a_N + a_S;
 
-            p_b(i,j) = -(u_star(i,j)  - u_star(i,j-1)) * Mesh.dy - (v_star(i-1,j) - v_star(i,j)) * Mesh.dx;
-
-            p_corr(i,j) = a_E * p_corr(i,j+1) + a_W * p_corr(i,j-1) + a_N * p_corr(i-1,j) + a_S*p_corr(i+1,j);
-            p_corr(i,j) += p_b(i,j);
-            p_corr(i,j) /= a_P;
+                p_corr(i,j) = a_E * p_corr(i,j+1) + a_W * p_corr(i,j-1) + a_N * p_corr(i-1,j) + a_S*p_corr(i+1,j);
+                p_corr(i,j) += p_b(i,j);
+                p_corr(i,j) /= a_P;
+            }
         }
     }
 }
