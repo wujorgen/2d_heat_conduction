@@ -8,7 +8,7 @@
 using Eigen::ArrayXXd;
 using Eigen::VectorXd;
 
-void SIMPLE(const BoundaryConditions, const GridInfo);
+void SIMPLE(const BoundaryConditions&, const GridInfo&, const ProblemInfo&);
 
 void EigenRef(ArrayXXd&);
 

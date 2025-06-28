@@ -4,6 +4,8 @@
 
 #include "ProblemInfo.hpp"
 #include "MomentumEquations.hpp"
+#include "Boundary.hpp"
+#include "Corrections.hpp"
 
 using Eigen::ArrayXXd;
 using Eigen::VectorXd;
@@ -19,7 +21,7 @@ void EigenRef(ArrayXXd& testarr)
     testarr(0, all) = 1234;
 }
 
-void SIMPLE(const BoundaryConditions BC, const GridInfo Mesh)
+void SIMPLE(const BoundaryConditions& BC, const GridInfo& Mesh, const ProblemInfo& Problem)
 {
     // PRESSURE ghost grids: (NY + 1, NX + 1)
     // The pressure ghost grid is fully staggered from the vertices.
@@ -45,7 +47,7 @@ void SIMPLE(const BoundaryConditions BC, const GridInfo Mesh)
     ArrayXXd d_n = ArrayXXd::Zero(Mesh.NY, Mesh.NX + 1);
 
     int itr = 0;
-    int maxitr = 1000;
+    int maxitr = 3;
     double error = 1;
     double ethresh = 1e-4;
 
@@ -55,37 +57,50 @@ void SIMPLE(const BoundaryConditions BC, const GridInfo Mesh)
     while (error > ethresh && itr < maxitr)
     {
         // calc u-momentum
-        CalcUStar(u, u_star, d_e);
+        CalcUStar(u_star, u, v, p, d_e, Mesh, Problem); cout << u_star << endl;
 
         // apply u-momentum boundary conditions
+        ApplyUBoundary(u_star, BC);
 
         // call v-momentum
-        CalcVStar(v, v_star, d_n);
+        CalcVStar(v_star, u, v, p, d_n, Mesh, Problem);
 
         // apply v-momentum boundary conditions
+        ApplyVBoundary(v_star, BC);
 
         // zero out pressure corrections
+        p_corr.setZero();
+        p_b.setZero();
 
         // calculate pressure corrections
+        CalcPressureCorrection(p_corr, p_b, u_star, v_star, d_e, d_n, Mesh);
 
         // apply pressure corrections to pressure field
+        ApplyPressureCorrection(p, p_corr, Problem);
 
         // apply pressure boundary conditions
+        NoPressureGradientAtBoundary(p);
 
         // correct u-momentum
+        ApplyUCorrection(u, u_star, d_e, p_corr, Problem);
 
         // apply u-momentum boundary conditions
+        ApplyUBoundary(u, BC);
 
         // correct v-momentum
+        ApplyVCorrection(v, v_star, d_n, p_corr, Problem);
 
         // apply v-momentum boundary conditions
+        ApplyVBoundary(v, BC);
 
         // check for convergence
+        cout << p_b.matrix().norm() << endl;
         itr++;
     }
     
-    cout << p << endl;
-    EigenRef(p);
-    cout << p << endl;
+    //cout << p << endl;
+    //EigenRef(p);
+    //cout << p << endl;
+    //cout << u_star << endl;
 }
 

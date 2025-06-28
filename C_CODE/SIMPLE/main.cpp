@@ -13,10 +13,10 @@ using namespace std;
 
 int main()
 {
-    int NX = 6;
+    int NX = 10;
     double LX = 1.0;
 
-    int NY = 6;
+    int NY = 10;
     double LY = 1.0;
 
     double dx = LX / (NX - 1);
@@ -45,10 +45,10 @@ int main()
 
     // Fluid Properties
     double mu = 1;  // 0.0010518  # dynamic viscosity, Pa*s
-    double rho = 1000;  // 1000  # density, kg/m^3
+    double rho = 100;  // 1000  # density, kg/m^3
 
     // Convergence
-    double alpha = 0.8;
+    double alpha = 0.5;
     double alpha_p = 0.5;
 
     ProblemInfo Problem;
@@ -70,7 +70,7 @@ int main()
     BoundaryConditions BC;
     BC.U_T = U_LID;
 
-    SIMPLE(BC, Mesh);
+    SIMPLE(BC, Mesh, Problem);
 
     return 0;
 }
