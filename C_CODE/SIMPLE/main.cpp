@@ -76,9 +76,9 @@ int main() {
     // TODO: not sure if the linear interp (extrapolation) used in
     //      the pressure boundary conditions cases to extend the interior of velocity fields is entirely correct
     // small perturbation to velocity fields is needed for the pressure driven problem to work
-    //BC.FIELD_L = false;
-    //BC.FIELD_R = false;
-    //BC.P_L = 1200;
+    // BC.FIELD_L = false;
+    // BC.FIELD_R = false;
+    // BC.P_L = 1200;
 
     SIMPLE(BC, Mesh, Problem);
 

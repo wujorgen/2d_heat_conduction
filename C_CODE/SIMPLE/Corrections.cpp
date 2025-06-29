@@ -16,7 +16,7 @@ void CalcPressureCorrection(ArrayXXd& p_corr, ArrayXXd& p_b, const ArrayXXd& u_s
             p_b(i, j) = -(u_star(i, j) - u_star(i, j - 1)) * Mesh.dy - (v_star(i - 1, j) - v_star(i, j)) * Mesh.dx;
         }
     }
-    for (int g = 0; g < 50; g++) {
+    for (int g = 0; g < 50; g++) { // TODO
         for (int i = 1; i < p_corr.rows() - 1; i++) {
             for (int j = 1; j < p_corr.cols() - 1; j++) {
                 a_E = -d_e(i, j) * Mesh.dy;
