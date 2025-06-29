@@ -1,5 +1,5 @@
 #include <Eigen/Dense>
-
+#include <iostream>
 #include "ProblemInfo.hpp"
 
 using Eigen::all;
@@ -79,24 +79,32 @@ void ApplyPBoundary(ArrayXXd &p, const BoundaryConditions &BC) {
     if (BC.FIELD_T) {
         p(0, all) = p(1, all);
     } else {
-        p(0, all) = BC.P_T * 2 - p(1, all);
+        //p(0, all) = BC.P_T * 2 - p(1, all);
+        p(0, all) = BC.P_T;
+        p(1, all) = BC.P_T;
     }
     // bottom
     if (BC.FIELD_B) {
         p(last, all) = p(last - 1, all);
     } else {
-        p(last, all) = BC.P_B * 2 - p(last - 1, all);
+        // p(last, all) = BC.P_B * 2 - p(last - 1, all);
+        p(last, all) = BC.P_B;
+        p(last - 1, all) = BC.P_B;
     }
     // left
     if (BC.FIELD_L) {
         p(all, 0) = p(all, 1);
     } else {
-        p(all, 0) = BC.P_L * 2 - p(all, 1);
+        // p(all, 0) = BC.P_L * 2 - p(all, 1);
+        p(all, 0) = BC.P_L;
+        p(all, 1) = BC.P_L;
     }
     // right
     if (BC.FIELD_R) {
         p(all, last) = p(all, last - 1);
     } else {
-        p(all, last) = BC.P_R * 2 - p(all, last - 1);
+        // p(all, last) = BC.P_R * 2 - p(all, last - 1);
+        p(all, last) = BC.P_R;
+        p(all, last - 1) = BC.P_R;
     }
 }

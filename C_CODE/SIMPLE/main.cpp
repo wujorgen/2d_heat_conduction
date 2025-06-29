@@ -46,7 +46,7 @@ int main() {
 
     // Fluid Properties
     double mu = 1;    // 0.0010518  # dynamic viscosity, Pa*s
-    double rho = 50;  // 1000  # density, kg/m^3
+    double rho = 10;  // 1000  # density, kg/m^3
 
     // Convergence
     double alpha = 0.5;
@@ -70,15 +70,15 @@ int main() {
 
     BoundaryConditions BC;
     // LID DRIVEN CAVITY
-    BC.U_T = U_LID;
+    //BC.U_T = U_LID;
 
     // DIFFERENTIAL PRESSURE PIPE FLOW?
     // TODO: not sure if the linear interp (extrapolation) used in
     //      the pressure boundary conditions cases to extend the interior of velocity fields is entirely correct
     // small perturbation to velocity fields is needed for the pressure driven problem to work
-    // BC.FIELD_L = false;
-    // BC.FIELD_R = false;
-    // BC.P_L = 1200;
+    BC.FIELD_L = false;
+    BC.FIELD_R = false;
+    BC.P_L = 800;
 
     SIMPLE(BC, Mesh, Problem);
 

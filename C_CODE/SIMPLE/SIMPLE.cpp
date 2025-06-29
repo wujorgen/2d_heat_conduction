@@ -42,12 +42,6 @@ void SIMPLE(const BoundaryConditions& BC, const GridInfo& Mesh, const ProblemInf
     ArrayXXd p_star = ArrayXXd::Zero(Mesh.NY + 1, Mesh.NX + 1);
     ArrayXXd p_corr = ArrayXXd::Zero(Mesh.NY + 1, Mesh.NX + 1);
     ArrayXXd p_b = ArrayXXd::Zero(Mesh.NY + 1, Mesh.NX + 1);
-    for (int i = 0; i < p.rows(); i++) {
-        for (int j = 0; j < p.cols(); j++) {
-            double x_frac = double(j) / (p.cols() - 1);
-            p(i, j) = BC.P_L * (1 - x_frac) + BC.P_R * x_frac;  // linear interpolation
-        }
-    }
     ApplyPBoundary(p, BC);
 
     // u grid: (NY + 1, NX)
@@ -71,6 +65,7 @@ void SIMPLE(const BoundaryConditions& BC, const GridInfo& Mesh, const ProblemInf
     ApplyVBoundary(v, BC);
 
     int itr = 0;
+    int minitr = 10;
     int maxitr = 1000;
     double error = 1;
     double u_error;
@@ -82,7 +77,7 @@ void SIMPLE(const BoundaryConditions& BC, const GridInfo& Mesh, const ProblemInf
     vector<double> errors;
 
     // TODO: timestep loop around this, with conditional to disable transient term
-    while (!DIVERGED && (error > ethresh || itr < 10) && (itr < maxitr)) {
+    while (!DIVERGED && (error > ethresh || itr < minitr) && (itr < maxitr)) {
         // calc u-momentum
         CalcUStar(u_star, u, v, p, d_e, Mesh, Problem);
 
