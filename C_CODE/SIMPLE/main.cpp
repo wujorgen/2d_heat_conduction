@@ -1,22 +1,23 @@
 #include <math.h>
+
 #include <Eigen/Dense>
 #include <iostream>
+
 #include "Boundary.hpp"
 #include "SIMPLE.hpp"
 
-using Eigen::ArrayXXd;
-using Eigen::VectorXd;
-using Eigen::seq;
 using Eigen::all;
+using Eigen::ArrayXXd;
 using Eigen::last;
+using Eigen::seq;
+using Eigen::VectorXd;
 using namespace std;
 
-int main()
-{
-    int NX = 101;
+int main() {
+    int NX = 51;
     double LX = 0.5;
 
-    int NY = 101;
+    int NY = 31;
     double LY = 0.3;
 
     double dx = LX / (NX - 1);
@@ -29,13 +30,13 @@ int main()
     // note that the matrices are indexed as:
     // 0-------j
     // |
-    // | 
+    // |
     // i
 
     // while the grid is indexed as
     // Y
-    // | 
-    // | 
+    // |
+    // |
     // 0-------X
 
     // The grid defines vertices.
@@ -44,12 +45,12 @@ int main()
     double U_LID = 2;
 
     // Fluid Properties
-    double mu = 1;  // 0.0010518  # dynamic viscosity, Pa*s
+    double mu = 1;    // 0.0010518  # dynamic viscosity, Pa*s
     double rho = 50;  // 1000  # density, kg/m^3
 
     // Convergence
     double alpha = 0.5;
-    double alpha_p = 0.3;
+    double alpha_p = 0.5;
 
     ProblemInfo Problem;
     Problem.mu = mu;
@@ -68,7 +69,16 @@ int main()
     Mesh.y = y;
 
     BoundaryConditions BC;
+    // LID DRIVEN CAVITY
     BC.U_T = U_LID;
+
+    // DIFFERENTIAL PRESSURE PIPE FLOW?
+    // TODO: not sure if the linear interp (extrapolation) used in
+    //      the pressure boundary conditions cases to extend the interior of velocity fields is entirely correct
+    // small perturbation to velocity fields is needed for the pressure driven problem to work
+    //BC.FIELD_L = false;
+    //BC.FIELD_R = false;
+    //BC.P_L = 1200;
 
     SIMPLE(BC, Mesh, Problem);
 

@@ -3,16 +3,14 @@
 
 #include <Eigen/Dense>
 
-struct ProblemInfo
-{
+struct ProblemInfo {
     double mu;
     double rho;
     double relax = 0.8;
     double relaxp = 0.8;
 };
 
-struct GridInfo
-{
+struct GridInfo {
     int NX;
     int NY;
     double LX;
@@ -23,9 +21,15 @@ struct GridInfo
     Eigen::VectorXd y;
 };
 
-struct BoundaryConditions 
-{
+// if a velocity boundary condition is prescribed: the pressure boundary condition at that wall is zero-gradient
+// otherwise, a pressure boundary condition is used and the velocity boundary condition is left at zero-gradient
+struct BoundaryConditions {
     // Top, Left, Right, Bottom
+    // bool: flow field BC (or not)
+    bool FIELD_T = true;
+    bool FIELD_B = true;
+    bool FIELD_L = true;
+    bool FIELD_R = true;
     // U boundary conditions
     double U_T = 0;
     double U_L = 0;

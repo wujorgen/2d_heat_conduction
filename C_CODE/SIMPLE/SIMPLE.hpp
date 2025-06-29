@@ -13,8 +13,7 @@ void FinalUVPFields(
     Eigen::ArrayXXd&,
     const Eigen::ArrayXXd&,
     const Eigen::ArrayXXd&,
-    const Eigen::ArrayXXd&
-);
+    const Eigen::ArrayXXd&);
 
 void EigenRef(Eigen::ArrayXXd&);
 
