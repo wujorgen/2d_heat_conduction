@@ -90,7 +90,7 @@ int main()
     double KINEMATIC_VISCOSITY = 0.1;
     double DENSITY = 1.0;
     double HORIZONTAL_VELOCITY_TOP = 2.0;  // in the positive x direction
-    int N_PRESSURE_POISSON_ITERATIONS = 50;
+    int N_PRESSURE_POISSON_ITERATIONS = 100;
 
     double ELEMENT_LENGTH = DOMAIN_SIZE / (N_POINTS - 1);
 
