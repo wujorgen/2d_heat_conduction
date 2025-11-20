@@ -3,3 +3,4 @@ secret/
 a.out
 venv/
 build/
+.DS_Store
