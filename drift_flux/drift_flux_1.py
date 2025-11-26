@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from copy import deepcopy
 
 # Finite Difference Grid
-NX = 51
-L = 1
+NX = 201
+L = 2
 X = np.linspace(0, L, NX, endpoint=True)
 dx = L / (NX - 1)
 D = 1 / 39.37
@@ -56,11 +56,15 @@ print(f"Water dynamic viscosity at room temp: {mu_l:.3f} kg/m^3")
 
 
 # inlet velocity boundary condition
-INLET_VELOCITY = 2
+INLET_VELOCITY = 3
 INLET_ALPHA = 0.2
 
 # exit pressure boundary condition:
 EXIT_PRESSURE = P_ATM
+
+
+inj_locs = np.array([NX//2])  # Inject at midpoint and 3/4 length
+inj_rates = np.array([0.0001])   # kg/s of gas at each location
 
 
 # %%
@@ -221,7 +225,7 @@ def calc_u_star_transient(x, p, rho, mu) -> dict:
     return {"x": x_next}
 
 # %%
-def calc_pressure_correction(u, rho, p, rlx=dt, rho_last=None) -> dict:
+def calc_pressure_correction(u, rho, p, rlx=dt, rho_last=None, injection_locations=None, injection_rates=None) -> dict:
     """"""
     def system(x):
         A = np.zeros((NX, NX))
@@ -272,14 +276,21 @@ def calc_pressure_correction(u, rho, p, rlx=dt, rho_last=None) -> dict:
                     if rho_last is not None:  # include transient term on RHS
                         b[i] += (rho[i] - rho_last[i]) / dt
 
+                if injection_locations is not None and i in injection_locations and injection_rates is not None:
+                    idx = np.where(injection_locations == i)[0][0]
+                    m_dot_inj = injection_rates[idx]  # kg/s injected
+                    A_pipe = np.pi * (D/2)**2
+                    source = m_dot_inj / (A_pipe * dx)
+                    b[i] += source
+
         return A, b
     A, b = system(None)
-    p_corr = np.linalg.inv(A.T @ A) @ A.T @ b  # linear system - matrix inversion is fine for 1d
+    p_corr = np.linalg.solve(A, b)
     return {"x": p_corr}
     return min_system(system, x0=alpha, verbose=False)
 
 # %%
-def void_transport(u_g, alpha, alpha_last=None):
+def void_transport(u_g, rho_g, alpha, alpha_last=None, injection_locations=None, injection_rates=None):
     def system(x):
         A = np.zeros((NX, NX))
         b = np.zeros((NX))
@@ -292,16 +303,24 @@ def void_transport(u_g, alpha, alpha_last=None):
                 A[i, i - 1] = - 1
                 b[i] = 0
             else:
-                A[i, i + 1] = u_g[i] / (2 * dx)
-                A[i, i - 1] = - u_g[i] / (2 * dx)
-                #A[i, i] = u_g[i] / dx
-                #A[i, i - 1] = - u_g[i] / dx
+                # A[i, i + 1] = rho_g[i + 1] * u_g[i + 1] / (2 * dx)
+                # A[i, i - 1] = - rho_g[i - 1] * u_g[i - 1] / (2 * dx)
+                A[i, i] = rho_g[i] * u_g[i] / dx
+                A[i, i - 1] = - rho_g[i - 1] * u_g[i - 1] / dx
                 b[i] = 0
+                # Source term for gas injection
+                if injection_locations is not None and i in injection_locations and injection_rates is not None:
+                    idx = np.where(injection_locations == i)[0][0]
+                    m_dot_inj = injection_rates[idx]  # kg/s injected
+                    A_pipe = np.pi * (D/2)**2
+                    source = m_dot_inj / (A_pipe * dx)
+                    b[i] += source
                 if alpha_last is not None:
                     b[i] += (alpha_last[i] - alpha[i]) / dt
         return A, b
     A, b = system(None)
-    sol = np.linalg.inv(A.T @ A) @ A.T @ b
+    #sol = np.linalg.inv(A.T @ A) @ A.T @ b
+    sol = np.linalg.solve(A, b)
     return {"x": sol}
     return min_system(system, x0=alpha, verbose=False)
 
@@ -315,8 +334,8 @@ p = np.full(NX, float(P_ATM))
 rho_g = np.full(NX, fn_rho_g(P_ATM, T_AMB))
 
 # convergence
-RLX_P = 0.2
-RLX_U = 0.5
+RLX_P = 0.1
+RLX_U = 0.2
 
 # set P to single phase liquid hydrostatic head
 p += (X[-1] - X) * g_eff * rho_l
@@ -329,7 +348,7 @@ mu_m = alpha*mu_g + (1-alpha)*mu_l
 p_corr_log = []
 
 # walkthrough of simple loop
-for itr in range(500):
+for itr in range(1000):
     u_star_sol = calc_u_star_steady(p, rho_m, mu_m, u_guess=u_m, verbose=False)
     u_star = u_star_sol["x"]
     u_star[0] = INLET_VELOCITY
@@ -342,7 +361,7 @@ for itr in range(500):
         plt.semilogy(u_star_sol["r_log"])
 
     # calculate pressure correction
-    p_corr = calc_pressure_correction(u_star, rho_m, p)
+    p_corr = calc_pressure_correction(u_star, rho_m, p)# injection_locations=inj_locs, injection_rates=inj_rates)
     if False:
         fig, ax1 = plt.subplots(figsize=(6,2))
         ax2 = ax1.twinx()
@@ -366,15 +385,13 @@ for itr in range(500):
     u_g = C0 * u_m + V_gj
 
     # solve void transport using known gas velocity
-    void_update_solution = void_transport(u_g, alpha)
+    void_update_solution = void_transport(u_g, rho_g, alpha, injection_locations=inj_locs, injection_rates=inj_rates)
     if "converged" in void_update_solution.keys():
         if not void_update_solution["converged"]:
             print(f"Warning at iteration {itr}: void_update_solution not converged.")
     alpha = void_update_solution["x"]
     alpha[0] = INLET_ALPHA
-    # add void fraction, like gas injection, to see what happens
-    alpha[-NX//2:] += 0.2
-    alpha[-NX//4:] += 0.2
+
     alpha = np.clip(alpha, a_min=0.01, a_max=0.99)
     #plt.figure()
     #plt.title("alpha debug")
@@ -424,4 +441,28 @@ plt.legend()
 plt.xlabel("Axial Location (m)")
 plt.ylabel("Pressure (kPa)")
 
+# %%
+fig, ax1 = plt.subplots(figsize=(6,3))
+ax2 = ax1.twinx()
+ax1.plot(rho_g*alpha*u_g + rho_l*(1-alpha)*u_l, color="purple")
+ax2.plot(rho_g*alpha + rho_l*(1-alpha), color="blue")
+ax2.axhline(rho_l, color="red")
+
+# %%
+A_pipe = np.pi * (D/2)**2
+
+# Mass flow rates (kg/s)
+
+inlet_mass_flow = (rho_g[0] * u_g[0] * alpha[0] + rho_l * u_l[0] * (1 - alpha[0])) * A_pipe
+outlet_mass_flow = (rho_g[-1] * u_g[-1] * alpha[-1] + rho_l * u_l[-1] * (1 - alpha[-1])) * A_pipe
+total_injected = np.sum(inj_rates)
+
+expected_outlet = inlet_mass_flow + total_injected
+error = np.abs(outlet_mass_flow - expected_outlet) / expected_outlet
+
+print(f"Inlet mass flow: {inlet_mass_flow:.6f} kg/s")
+print(f"Injected mass: {total_injected:.6f} kg/s")
+print(f"Expected outlet: {expected_outlet:.6f} kg/s")
+print(f"Actual outlet: {outlet_mass_flow:.6f} kg/s")
+print(f"Conservation error: {error*100:.3f}%")
 # %%
