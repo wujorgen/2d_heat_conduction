@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from copy import deepcopy
 
 # Finite Difference Grid
-NX = 101
+NX = 51
 L = 1
 X = np.linspace(0, L, NX, endpoint=True)
 dx = L / (NX - 1)
@@ -57,7 +57,7 @@ print(f"Water dynamic viscosity at room temp: {mu_l:.3f} kg/m^3")
 
 # inlet velocity boundary condition
 INLET_VELOCITY = 2
-INLET_ALPHA = 0.1
+INLET_ALPHA = 0.2
 
 # exit pressure boundary condition:
 EXIT_PRESSURE = P_ATM
@@ -238,36 +238,39 @@ def calc_pressure_correction(u, rho, p, rlx=dt, rho_last=None) -> dict:
                 A[i, i + 1] = (rlx / dx**2)
                 A[i, i] = (rlx / dx**2) * (-2)
                 A[i, i - 1] = (rlx / dx**2)
-                #b[i] = (rho[i + 1] * u[i + 1] - rho[i - 1] * u[i - 1]) / (2 * dx)
-                #if rho_last is not None:  # include transient term on RHS
-                #    b[i] += (rho[i] - rho_last[i]) / dt
-                
-                # Rhie-Chow interpolation for face velocities
-                # Coefficient at faces (averaged)
-                coeff_plus = 0.5 * (dx / (rho[i] * np.abs(u[i])) + dx / (rho[i+1] * np.abs(u[i+1])))
-                coeff_minus = 0.5 * (dx / (rho[i-1] * np.abs(u[i-1])) + dx / (rho[i] * np.abs(u[i])))
-                
-                # Face velocity at i+1/2 with Rhie-Chow correction
-                u_interp_plus = 0.5 * (u[i] + u[i+1])
-                dp_face_plus = (p[i+1] - p[i]) / dx
-                dp_cell_avg_plus = 0.5 * ((p[i+1] - p[i-1])/(2*dx) + (p[i+2] - p[i])/(2*dx)) if i < NX-2 else (p[i+1] - p[i-1])/(2*dx)
-                u_face_plus = u_interp_plus - coeff_plus * (dp_face_plus - dp_cell_avg_plus)
-                
-                # Face velocity at i-1/2 with Rhie-Chow correction
-                u_interp_minus = 0.5 * (u[i-1] + u[i])
-                dp_face_minus = (p[i] - p[i-1]) / dx
-                dp_cell_avg_minus = 0.5 * ((p[i] - p[i-2])/(2*dx) + (p[i+1] - p[i-1])/(2*dx)) if i > 1 else (p[i+1] - p[i-1])/(2*dx)
-                u_face_minus = u_interp_minus - coeff_minus * (dp_face_minus - dp_cell_avg_minus)
-                
-                # Density at faces (averaged)
-                rho_face_plus = 0.5 * (rho[i] + rho[i+1])
-                rho_face_minus = 0.5 * (rho[i-1] + rho[i])
-                
-                # Mass flux divergence using face velocities
-                b[i] = (rho_face_plus * u_face_plus - rho_face_minus * u_face_minus) / dx
-                
-                if rho_last is not None:  # include transient term on RHS
-                    b[i] += (rho[i] - rho_last[i]) / dt
+
+                if False:
+                    b[i] = (rho[i + 1] * u[i + 1] - rho[i - 1] * u[i - 1]) / (2 * dx)
+                    #b[i] = (rho[i] * u[i] - rho[i - 1] * u[i - 1]) / dx
+                    if rho_last is not None:  # include transient term on RHS
+                        b[i] += (rho[i] - rho_last[i]) / dt
+                else:
+                    # Rhie-Chow interpolation for face velocities
+                    # Coefficient at faces (averaged)
+                    coeff_plus = 0.5 * (dx / (rho[i] * np.abs(u[i])) + dx / (rho[i+1] * np.abs(u[i+1])))
+                    coeff_minus = 0.5 * (dx / (rho[i-1] * np.abs(u[i-1])) + dx / (rho[i] * np.abs(u[i])))
+                    
+                    # Face velocity at i+1/2 with Rhie-Chow correction
+                    u_interp_plus = 0.5 * (u[i] + u[i+1])
+                    dp_face_plus = (p[i+1] - p[i]) / dx
+                    dp_cell_avg_plus = 0.5 * ((p[i+1] - p[i-1])/(2*dx) + (p[i+2] - p[i])/(2*dx)) if i < NX-2 else (p[i+1] - p[i-1])/(2*dx)
+                    u_face_plus = u_interp_plus - coeff_plus * (dp_face_plus - dp_cell_avg_plus)
+                    
+                    # Face velocity at i-1/2 with Rhie-Chow correction
+                    u_interp_minus = 0.5 * (u[i-1] + u[i])
+                    dp_face_minus = (p[i] - p[i-1]) / dx
+                    dp_cell_avg_minus = 0.5 * ((p[i] - p[i-2])/(2*dx) + (p[i+1] - p[i-1])/(2*dx)) if i > 1 else (p[i+1] - p[i-1])/(2*dx)
+                    u_face_minus = u_interp_minus - coeff_minus * (dp_face_minus - dp_cell_avg_minus)
+                    
+                    # Density at faces (averaged)
+                    rho_face_plus = 0.5 * (rho[i] + rho[i+1])
+                    rho_face_minus = 0.5 * (rho[i-1] + rho[i])
+                    
+                    # Mass flux divergence using face velocities
+                    b[i] = (rho_face_plus * u_face_plus - rho_face_minus * u_face_minus) / dx
+                    
+                    if rho_last is not None:  # include transient term on RHS
+                        b[i] += (rho[i] - rho_last[i]) / dt
 
         return A, b
     A, b = system(None)
@@ -371,7 +374,7 @@ for itr in range(500):
     alpha[0] = INLET_ALPHA
     # add void fraction, like gas injection, to see what happens
     alpha[-NX//2:] += 0.2
-    alpha[-NX//4:] += 0.1
+    alpha[-NX//4:] += 0.2
     alpha = np.clip(alpha, a_min=0.01, a_max=0.99)
     #plt.figure()
     #plt.title("alpha debug")
@@ -420,3 +423,5 @@ plt.axhline(P_ATM/1e3, color="gray", linestyle="--", label="Atmospheric Pressure
 plt.legend()
 plt.xlabel("Axial Location (m)")
 plt.ylabel("Pressure (kPa)")
+
+# %%
