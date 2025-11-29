@@ -389,28 +389,28 @@ def steady_state_solution():
         "convergence_history": corr_log,
     }
 
-sssol = steady_state_solution()
+ss_sol = steady_state_solution()
 
 # %%
 plt.figure(figsize=(6,3))
-plt.semilogy(sssol["convergence_history"])
+plt.semilogy(ss_sol["convergence_history"])
 
 plt.figure(figsize=(6,3))
-plt.plot(sssol["u_m"], label="mixture")
-plt.plot(sssol["u_l"], label="liquid")
-plt.plot(sssol["u_g"], label="gas")
+plt.plot(ss_sol["u_m"], label="mixture")
+plt.plot(ss_sol["u_l"], label="liquid")
+plt.plot(ss_sol["u_g"], label="gas")
 plt.legend()
 
 fig, ax1 = plt.subplots(figsize=(6,3))
 ax2 = ax1.twinx()
-ax1.plot(sssol["rho_g"], label="gas density")
-ax2.plot(sssol["alpha"], color="red", linestyle="--", label="void fraction")
+ax1.plot(ss_sol["rho_g"], label="gas density")
+ax2.plot(ss_sol["alpha"], color="red", linestyle="--", label="void fraction")
 ax2.set_ylim(0,1)
 fig.legend()
 fig.tight_layout()
 
 plt.figure(figsize=(6,3))
-plt.plot(sssol["p"], label="pressure")
+plt.plot(ss_sol["p"], label="pressure")
 plt.plot((FACES[-1] - FACES) * g_eff * rho_l + P_ATM, label="hydrostatic pressure")
 plt.axhline(P_ATM, linestyle="--", color="green", label="Atmospheric")
 plt.legend()
