@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from copy import deepcopy
 
 # Finite Volume Grid
-N_FACES = 41
+N_FACES = 51
 N_CELLS = N_FACES + 1  # include ghost cells
 L = 1
 dx = L / (N_FACES - 1)
@@ -15,6 +15,7 @@ FACES = np.linspace(0, L, N_FACES, endpoint=True)
 CELLS = np.linspace(0 - dx / 2, L + dx / 2, N_CELLS, endpoint=True)
 
 D = 1 / 39.37
+A_pipe = np.pi * (D/2)**2
 dt = 0.01
 T_end = 1
 NT = T_end / dt + 1
@@ -26,7 +27,9 @@ g_eff = g_constant * np.sin(np.deg2rad(theta))
 
 # Drift flux parameters
 C0 = 1.2
-V_gj = 0.35 * np.sqrt(g_eff * D)
+# V_gj = 0.35 * np.sqrt(g_eff * D)
+
+fn_Vgj = lambda alpha: 0.35 * np.sqrt(g_eff * D) * (1 - alpha)**1  # exponent in [0.5, 1.5]
 
 # Properties for air/water system
 
@@ -253,7 +256,7 @@ def calc_pressure_correction(u, rho, dt=dt, rho_last=None):
 # p_corr_sol = calc_pressure_correction(u=u_star_sol["x"], rho=rho_m)
 
 # %%
-def gaa_continuity_for_void(rho_g, u_g, void_in, void_last, rho_g_last=None):
+def gaa_continuity_for_void(rho_g, u_g, void_in, void_last, rho_g_last=None, injection_locations=None, injection_rates=None):
     def system(x):
         A = np.zeros((N_CELLS, N_CELLS))
         b = np.zeros((N_CELLS))
@@ -280,8 +283,14 @@ def gaa_continuity_for_void(rho_g, u_g, void_in, void_last, rho_g_last=None):
                 A[i, idx_alpha_i] += rho_hat_iip1 * u_g[i] / dx
                 A[i, idx_alpha_im1] -= rho_hat_iim1 * u_g[i-1] / dx
                 b[i] = 0
+                # Source term for gas injection
+                if (injection_locations is not None) and (i in injection_locations) and (injection_rates is not None):
+                    idx = np.where(injection_locations == i)[0][0]
+                    m_dot_inj = injection_rates[idx]  # kg/s injected
+                    source = m_dot_inj / (A_pipe * dx)
+                    b[i] += source
                 if void_last is not None and rho_g_last is not None:
-                    pass  # TODO: (rho_g*alpha - rho_g_last*alpha_last) / dt <- alpha needs to be moved to LHS
+                    pass  # TODO: (rho_g*alpha - rho_g_last*alpha_last) / dt <- alpha needs to be moved to LHS, or assume alpha from last iteration
         return A, b
     sol = min_system(system, x0=void_last)
     return sol
@@ -289,7 +298,7 @@ def gaa_continuity_for_void(rho_g, u_g, void_in, void_last, rho_g_last=None):
 # %%
 def steady_state_solution():
     # inlet velocity boundary condition
-    INLET_VELOCITY = 1.5
+    INLET_VELOCITY = 2
     INLET_ALPHA = 0.2
 
     # exit pressure boundary condition:
@@ -309,13 +318,16 @@ def steady_state_solution():
 
     # variables: cell faces
     u_m = np.full(N_FACES, INLET_VELOCITY)
-    u_g = u_g = C0 * u_m + V_gj
+    u_g = u_g = C0 * u_m + fn_Vgj( (alpha[1:] + alpha[:-1])/2 )
     u_l = u_l = (u_m - (alpha[1:] + alpha[:-1])/2 * u_g) / (1 - (alpha[1:] + alpha[:-1])/2)
 
     # convergence
     RLX_P = 0.5
-    RLX_U = 0.5
-    MAX_ITR = 1000
+    RLX_U = 0.8
+    MAX_ITR = 2000
+
+    CONVERGED = False
+    CTOL = 5e-3
 
     corr_log = []
 
@@ -339,6 +351,10 @@ def steady_state_solution():
         p_corr = p_corr_sol["x"]
         corr_log.append(np.linalg.norm(p_corr))
 
+        if np.linalg.norm(p_corr) < CTOL:
+            CONVERGED = True
+            break
+
         # calc velocity correction
         u_corr = -2 * dx / (rho_m[1:] + rho_m[:-1]) * (p_corr[1:] - p_corr[:-1])/dx
 
@@ -353,13 +369,14 @@ def steady_state_solution():
         p[-2] = P_ATM
 
         # update gas velocity via drift flux closure
+        V_gj = fn_Vgj( (alpha[1:] + alpha[:-1])/2 )
         u_g = C0 * u_m + V_gj
 
         # solve gas continuity to update void fraction
         alpha_sol = gaa_continuity_for_void(rho_g=rho_g, u_g=u_g, void_in=INLET_ALPHA, void_last=alpha)
         fn_check_step_convergence(alpha_sol, itr, "alpha_sol")
         alpha = alpha_sol["x"]
-        alpha[0] = INLET_ALPHA
+        # alpha[0] = INLET_ALPHA  # wrong - handled in gas continuity solve
         alpha = np.clip(alpha, a_min=0.01, a_max=0.99)  # TODO: diff values?
 
         # update liquid velocity
@@ -386,10 +403,12 @@ def steady_state_solution():
         "p": p_at_faces,
         "rho_m": rho_m_at_faces,
         "rho_g": rho_g_at_faces,
+        "converged": CONVERGED,
         "convergence_history": corr_log,
     }
 
 ss_sol = steady_state_solution()
+print(f"{ss_sol['converged']=}, {len(ss_sol['convergence_history'])}")
 
 # %%
 plt.figure(figsize=(6,3))
@@ -414,3 +433,18 @@ plt.plot(ss_sol["p"], label="pressure")
 plt.plot((FACES[-1] - FACES) * g_eff * rho_l + P_ATM, label="hydrostatic pressure")
 plt.axhline(P_ATM, linestyle="--", color="green", label="Atmospheric")
 plt.legend()
+
+# %%
+inlet_mass_flux = ss_sol["rho_g"][0] * ss_sol["u_g"][0] * ss_sol["alpha"][0] + rho_l * ss_sol["u_l"][0] * (1 - ss_sol["alpha"][0])
+outlet_mass_flux = ss_sol["rho_g"][-1] * ss_sol["u_g"][-1] * ss_sol["alpha"][-1] + rho_l * ss_sol["u_l"][-1] * (1 - ss_sol["alpha"][-1])
+
+pct_mass_change = (outlet_mass_flux - inlet_mass_flux) / inlet_mass_flux * 100
+print(f"Difference in outlet to inlet mass flow: {pct_mass_change:.2f}%")
+
+# %%
+mflux_in = ss_sol["rho_m"][0] * ss_sol["u_m"][0]
+mflux_out = ss_sol["rho_m"][-1] * ss_sol["u_m"][-1]
+print(f"Inlet: {mflux_in:.6f} kg/s/m^2, Outlet: {mflux_out:.6f} kg/s/m^2")
+print(f"Difference: {mflux_out - mflux_in:.6f} kg/s/m^2")
+
+# %%
