@@ -1,5 +1,6 @@
 # %%
 import numpy as np
+from numpy.typing import NDArray
 import scipy
 import matplotlib.pyplot as plt
 from CoolProp.CoolProp import PropsSI
@@ -151,46 +152,12 @@ def min_system(system, x0, lr = 0.5, tol_itr = 1e-7, tol_grad = 1e-4, max_itr:in
     }
 
 # %%
-
 def fn_fric(rho, v, mu):
     """Calculates Blasius friction factor."""
     Re_m = rho * v * D / mu
     fB = 0.316 / (np.abs(Re_m+0.001)**0.25)
     # print(Re_m, rho, v, D, mu)
-    return fB * np.sign(Re_m)
-
-'''
-# inlet velocity boundary condition
-INLET_VELOCITY = 3
-INLET_ALPHA = 0.2
-
-# exit pressure boundary condition:
-EXIT_PRESSURE = P_ATM
-
-#inj_locs = np.array([NX//2])  # Inject at midpoint and 3/4 length
-#inj_rates = np.array([0.0001])   # kg/s of gas at each location
-
-# variables: cell centers
-alpha = np.full(N_CELLS, INLET_ALPHA)
-
-p = np.full(N_CELLS, float(P_ATM))
-p += (CELLS[-1] - CELLS) * g_eff * rho_l  # set P to single phase liquid hydrostatic head
-
-rho_g = fn_rho_g(p, T_AMB)
-# rho_l = CONSTANT
-
-rho_m = alpha*rho_g + (1-alpha)*rho_l
-mu_m = alpha*mu_g + (1-alpha)*mu_l
-
-# variables: cell faces
-u_m = np.full(N_FACES, INLET_VELOCITY)
-u_g = u_g = C0 * u_m + V_gj
-u_l = u_l = (u_m - (alpha[1:] + alpha[:-1])/2 * u_g) / (1 - (alpha[1:] + alpha[:-1])/2)
-
-# convergence
-RLX_P = 0.1
-RLX_U = 0.2
-'''
+    return fB * np.sign(Re_m)        
 
 # %%
 def calc_U_star_steady(p, rho, mu, u_last, u_in):
@@ -294,6 +261,30 @@ def gaa_continuity_for_void(rho_g, u_g, void_in, void_last, rho_g_last=None, inj
         return A, b
     sol = min_system(system, x0=void_last)
     return sol
+
+# %%
+@dataclass
+class Solution:
+    N_FACES: int
+    N_CELLS: int
+    U: np.ndarray
+    U_L: np.ndarray
+    U_G: np.ndarray
+    RHO: np.ndarray
+    RHO_G: np.ndarray
+    CONVERGED: bool
+    LOG: np.ndarray
+
+    def cells_to_faces(self, field:str):
+        try:
+            arr = self.__getattribute__(str(field).upper())
+            arr = (arr[1:] + arr[:-1]) / 2
+        except AttributeError as e:
+            print(e)
+            arr = None
+        finally:
+            return arr
+    
 
 # %%
 def steady_state_solution():
