@@ -4,3 +4,4 @@ a.out
 venv/
 build/
 .DS_Store
+__pycache__/

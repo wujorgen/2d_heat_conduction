@@ -223,7 +223,7 @@ def calc_pressure_correction(u, rho, dt=dt, rho_last=None):
 # p_corr_sol = calc_pressure_correction(u=u_star_sol["x"], rho=rho_m)
 
 # %%
-def gaa_continuity_for_void(rho_g, u_g, void_in, void_last, rho_g_last=None, injection_locations=None, injection_rates=None):
+def gas_continuity_for_void(rho_g, u_g, void_in, void_last, rho_g_last=None, injection_locations=None, injection_rates=None):
     def system(x):
         A = np.zeros((N_CELLS, N_CELLS))
         b = np.zeros((N_CELLS))
@@ -364,7 +364,7 @@ def steady_state_solution():
         u_g = C0 * u_m + V_gj
 
         # solve gas continuity to update void fraction
-        alpha_sol = gaa_continuity_for_void(rho_g=rho_g, u_g=u_g, void_in=INLET_ALPHA, void_last=alpha)
+        alpha_sol = gas_continuity_for_void(rho_g=rho_g, u_g=u_g, void_in=INLET_ALPHA, void_last=alpha)
         fn_check_step_convergence(alpha_sol, itr, "alpha_sol")
         alpha = alpha_sol["x"]
         # alpha[0] = INLET_ALPHA  # wrong - handled in gas continuity solve
