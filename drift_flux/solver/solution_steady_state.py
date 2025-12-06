@@ -6,7 +6,7 @@ from constants import P_ATM, T_AMB, dx, N_CELLS, N_FACES, CELLS, FACES, g_eff, r
 from functions import calc_U_star_steady, calc_pressure_correction_steady, gas_continuity_for_void_steady
 from helper_functions import fn_check_step_convergence
 
-def steady_state_solution():
+def steady_state_solution(config=None):
     """Solves steady state mixture continuity and momentum equations using the SIMPLE algorithm."""
     # inlet velocity boundary condition
     INLET_VELOCITY = 2
@@ -18,7 +18,7 @@ def steady_state_solution():
     # variables: cell centers
     alpha = np.full(N_CELLS, INLET_ALPHA)
 
-    p = np.full(N_CELLS, float(P_ATM))
+    p = np.full(N_CELLS, float(EXIT_PRESSURE))
     p += (CELLS[-1] - CELLS) * g_eff * rho_l  # set P to single phase liquid hydrostatic head
 
     rho_g = fn_rho_g(p, T_AMB)
@@ -69,8 +69,8 @@ def steady_state_solution():
         # enforce bc
         u_m[0] = INLET_VELOCITY
         #p[-1] = 2 * P_ATM - p[-2]
-        p[-1] = P_ATM
-        p[-2] = P_ATM
+        p[-1] = EXIT_PRESSURE
+        p[-2] = EXIT_PRESSURE
 
         # update gas velocity via drift flux closure
         V_gj = fn_Vgj( (alpha[1:] + alpha[:-1])/2 )
